@@ -1,6 +1,12 @@
 # Python virtual environment
 .venv/
 
+# macOS
+.DS_Store
+
+# Old versions
+Oldfiles/
+
 # Byte-compiled / cache
 __pycache__/
 *.py[cod]
