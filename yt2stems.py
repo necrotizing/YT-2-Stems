@@ -21,6 +21,8 @@ from PySide6.QtCore import Qt, QThread, Signal, QTimer
 
 import essentia.standard as es
 
+from updater import update_ytdlp, UpdateStatus, UpdateResult
+
 # Path to the demucs runner wrapper (same directory as this script)
 SCRIPT_DIR = Path(__file__).parent.resolve()
 DEMUCS_RUNNER = SCRIPT_DIR / "demucs_runner.py"
@@ -206,6 +208,16 @@ class StemWorker(QThread):
                     pass
 
 
+# ─────────────────────── Update worker thread ──────────────────────
+class UpdateWorker(QThread):
+    """Runs the yt-dlp update check off the UI thread so launch stays responsive."""
+    done = Signal(object)  # emits an UpdateResult
+
+    def run(self):
+        result = update_ytdlp()
+        self.done.emit(result)
+
+
 # ──────────────────────────── GUI ─────────────────────────────────
 class MainWindow(QWidget):
     # Model key, description for dropdown
@@ -254,8 +266,14 @@ class MainWindow(QWidget):
         self.progress = QProgressBar(); self.progress.setRange(0, 100)
         self.log_view = QTextEdit(readOnly=True)
 
+        # Dependency status banner (yt-dlp auto-update on launch)
+        self.update_lbl = QLabel("🔄  Checking yt-dlp for updates …")
+        self.update_lbl.setAlignment(Qt.AlignCenter)
+        self._set_update_style("#6b7280")  # neutral grey while checking
+
         # Layout
         lay = QVBoxLayout(self)
+        lay.addWidget(self.update_lbl)
         # youtube and soundcloud links are supported
         lay.addWidget(QLabel("URL / File:"));
         lay.addWidget(self.url_edit)
@@ -298,6 +316,43 @@ class MainWindow(QWidget):
         self.out_btn.clicked.connect(self.pick_outdir)
         self.run_btn.clicked.connect(self.start_job)
         self.file_btn.clicked.connect(self.choose_file)
+
+        # Kick off the yt-dlp update check before the user can start a job.
+        # The Run button stays disabled until the check settles, so downloads
+        # never use a stale extractor that the site has already broken.
+        self.run_btn.setEnabled(False)
+        self.update_worker = UpdateWorker()
+        self.update_worker.done.connect(self.on_update_checked)
+        self.update_worker.start()
+
+    def _set_update_style(self, color: str):
+        """Apply a colored banner style to the dependency status label."""
+        self.update_lbl.setStyleSheet(
+            f"QLabel {{ background-color: {color}; color: white; "
+            f"padding: 6px; font-weight: bold; border-radius: 4px; }}"
+        )
+
+    def on_update_checked(self, result: UpdateResult):
+        """Handle the yt-dlp update result: update banner and unlock Run."""
+        colors = {
+            UpdateStatus.UPDATED: "#16a34a",     # green
+            UpdateStatus.UP_TO_DATE: "#16a34a",  # green
+            UpdateStatus.OFFLINE: "#d97706",     # amber (non-fatal)
+            UpdateStatus.ERROR: "#d97706",       # amber (non-fatal)
+        }
+        icons = {
+            UpdateStatus.UPDATED: "⬆️",
+            UpdateStatus.UP_TO_DATE: "✅",
+            UpdateStatus.OFFLINE: "⚠️",
+            UpdateStatus.ERROR: "⚠️",
+        }
+        self._set_update_style(colors.get(result.status, "#6b7280"))
+        self.update_lbl.setText(f"{icons.get(result.status, 'ℹ️')}  {result.message}")
+        self.log(f"[updater] {result.message}")
+
+        # Always re-enable Run afterwards. Even on an offline/error result the
+        # currently installed yt-dlp may still work, so we let the user try.
+        self.run_btn.setEnabled(True)
 
     def pick_outdir(self):
         d = QFileDialog.getExistingDirectory(self, "Select output folder")
