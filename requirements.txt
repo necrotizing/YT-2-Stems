@@ -51,4 +51,6 @@ tqdm==4.67.1
 treetable==0.2.5
 typing_extensions==4.13.2
 urllib3==2.4.0
-yt-dlp==2025.4.30
+# yt-dlp is intentionally unpinned: sites break older releases often, and the
+# app auto-updates it on launch (see updater.py). Keep a floor, not a pin.
+yt-dlp>=2026.8.19

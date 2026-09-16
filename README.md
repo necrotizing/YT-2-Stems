@@ -21,6 +21,7 @@ Result: a folder of stems (vocals, drums, bass, other, etc.) plus BPM + key read
 |----------------|---------|
 | **Drag-and-drop / File picker** | Load `mp3 / wav / flac / m4a` or paste a YouTube/SoundCloud URL |
 | **Clipboard detection** | Automatically detects YouTube/SoundCloud URLs in clipboard on launch |
+| **Self-updating downloader** | On launch, auto-updates `yt-dlp` to the latest release (the heavy ML stack stays pinned) so YouTube/SoundCloud changes don't break downloads. A status banner shows the result; the **Download & Split** button unlocks once the check finishes |
 | **Model selector** | • `htdemucs` (4 stems, fast)<br>• `htdemucs_ft` (4 stems, fine-tuned)<br>• `htdemucs_6s` (6 stems: drums, bass, vocals, guitar, piano, other)<br>• `mdx` (4 stems, fastest)<br>• `mdx_extra_q` (4 stems, highest quality)<br>• Optional 2-stem mode (vocals + accompaniment) |
 | **Audio settings** | Configurable MP3 bitrate (96k - 320k) |
 | **BPM + Key**  | Automatic tempo and musical key detection via Essentia |
@@ -36,7 +37,17 @@ Result: a folder of stems (vocals, drums, bass, other, etc.) plus BPM + key read
 | **Python 3.9+** | runtime | [python.org](https://python.org) |
 | **FFmpeg**      | MP3 transcode | `brew install ffmpeg` / `choco install ffmpeg` |
 
-Dependencies are managed via `requirements.txt`
+Dependencies are managed via `requirements.txt`.
+
+> **Staying current:** `yt-dlp` breaks whenever YouTube/SoundCloud change their
+> sites (e.g. the *"page needs to be reloaded"* / SABR errors). The app now
+> auto-updates `yt-dlp` on every launch, so you shouldn't need to touch
+> dependencies between uses. If a download ever still fails, restart the app to
+> force a fresh update, or upgrade manually:
+>
+> ```bash
+> .venv/bin/python -m pip install -U yt-dlp
+> ```
 
 ---
 
